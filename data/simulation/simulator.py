@@ -13,11 +13,8 @@ class Simulator():
     def simulate(self, n, input_dim):
         if self.data_type == "moon":
             assert input_dim == 2
-            X, y = make_moons(n)
-
-        #  Add uniform noise
-        #TODO: add gaussian noise
-        X += self.npr.rand(*X.shape) * self.noise
+            # w/ gaussian noise
+            X, y = make_moons(n, noise=self.noise)
 
         # Ensure the data is random shuffled
         idx = np.arange(n)
