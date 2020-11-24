@@ -52,7 +52,7 @@ class ExperimentParams:
         self.sha = repo.head.object.hexsha
 
     def save(self, name):
-        with open(name, "w") as file:
+        with open(name + ".json", "w") as file:
             json.dump(self.__dict__, file)
     
     def load(self, name):
