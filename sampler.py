@@ -1,3 +1,4 @@
+import time
 import scipy 
 import cvxpy as cp
 import numpy as np
@@ -56,17 +57,23 @@ class CVXSampler(Sampler):
         objective_fn = cp.atoms.affine.trace.trace(D.T @ Z) + self.alpha * sum(cp.atoms.norm(C @ Z, q, axis=1))
         constraints = [Z >= 0, ones.T @ Z == ones.T]
         prob = cp.Problem(cp.Minimize(objective_fn), constraints)
+        t1 = time.time()
+        #TODO: It does not scale to large scale problem. Is there any way to speed up?
         print("Solving Problem")
         prob.solve()
+        print("Takes {:.2f} sec".format(time.time() - t1))
 
-        representatives = np.unique(Z.value.argmax(0))
-        idx_to_label = np.where(~labeled_mask)[0][representatives]
-        return idx_to_label
+
+        representatives = np.unique(Z.value.argmax(0))  # Index in unlabeled set
+        idx_to_label = np.where(~labeled_mask)[0][representatives]  # Index in the whole set
+        return idx_to_label, Z.value
 
 
 class RandomSampler(Sampler):
     def __init__(self, X, labeled_mask):
         Sampler.__init__(self, X, labeled_mask)
+        self.npr = np.random.RandomState(123)
 
-    def sample(self, n, learner):
-        pass
+    def sample(self, n, **kwargs):
+        unlabeled_idx = np.where(~self.labeled_mask)[0]
+        return self.npr.choice(unlabeled_idx, n, replace=False)
