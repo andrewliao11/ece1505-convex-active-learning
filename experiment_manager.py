@@ -11,7 +11,7 @@ from plotly.subplots import make_subplots
 # Our custom classes
 from data.simulation.simulator import Simulator
 from learner import SVMLearner
-from sampler import CVXSampler, RandomSampler
+from sampler import CVXSampler, RandomSampler, CVXSamplerNoConfidence
 
 template = "plotly_white"
 
@@ -26,6 +26,7 @@ catalog = {
     "samplers": {
         "CVXSampler": CVXSampler,
         "RandomSampler": RandomSampler,
+        "CVXSamplerNoConfidence": CVXSamplerNoConfidence
     }
 }
 
@@ -98,7 +99,7 @@ class ExperimentManager:
         self.train_x, self.train_y = self.simulator.simulate(params.N, params.input_dim)
         self.test_x, self.test_y = self.simulator.simulate(params.N, params.input_dim)
 
-        self.sampler = sampler_cls(self.train_x, self.labeled_mask)
+        self.sampler = sampler_cls(self.train_x, self.labeled_mask, params)
 
         # Store experiment parameters
         self.params = params
@@ -121,7 +122,6 @@ class ExperimentManager:
                 "accuracy": float(self.get_accuracy(self.test_x, self.test_y))
             })
         
-        print(self.results)
         self.save(experiment_name)
 
     def save(self, name):
@@ -138,6 +138,10 @@ class ExperimentManager:
             experiment_dir.mkdir()
 
         self.params.save(experiment_dir / "params")
+        self.plot_acc_vs_labeled(
+            str(experiment_dir / "acc_vs_labeled.jpeg"),
+            title="Test Accuracy vs Labeled %"
+        )
         
         # Save results
         with open(experiment_dir / "results.json", "w") as file:
@@ -171,12 +175,36 @@ class ExperimentManager:
 
     def sample_data_to_label(self):
         """Select new data to label."""
-        return self.sampler.sample(5)
+        return self.sampler.sample(5, learner=self.learner)
 
     def label(self):
         """Sample a new set of  """
         idx_to_label = self.sample_data_to_label()
         self.labeled_mask[idx_to_label] = True
+
+    def plot_acc_vs_labeled(self, filename, title=""):
+        """
+        Plots the curve of accuracy vs the number of labeled samples 
+        """
+        x = [result["num_labeled"] for result in self.results]
+        y = [result["accuracy"] for result in self.results]
+
+        fig = go.Figure(data=go.Scatter(x=x, y=y))
+        fig.update_layout(template=template)
+        fig.update_layout(
+            width=800, 
+            height=600, 
+            title={
+                'text': title,
+                'y':0.9,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            xaxis_title='Labeled (%)',
+            yaxis_title='Accuracy (%)'
+        )
+        fig.write_image(filename)
 
     def vis_train_test(self, title=""):
         """ 
@@ -270,3 +298,23 @@ class ExperimentManager:
 
         self.plots.append(fig)
 
+
+def run_experiments():
+    """
+    Run all experiments in the experiments folder that have 
+    their params.json specified but have no results.
+    """
+    experiment_dir = Path.cwd() / "experiments"
+    if experiment_dir.exists():
+        for experiement in experiment_dir.iterdir():
+            if experiement.is_dir():
+                params_json = experiement / "params.json"
+                results_json = experiement / "results.json"
+
+                # If an experiment is specified but has not been run
+                if params_json.exists() and not results_json.exists():
+                    params = ExperimentParams()
+                    params.load(str(params_json))
+
+                    experiment_manager = ExperimentManager(params)
+                    experiment_manager.run(experiement.name)
