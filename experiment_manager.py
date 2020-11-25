@@ -199,9 +199,16 @@ class ExperimentManager:
                 return "white"
             else:
                 return val
+        
+        def get_border_color(val):
+            if val < 0:
+                return "black"
+            else:
+                return val
 
         colors = copy.deepcopy(self.train_y)
         colors[~self.labeled_mask] = -1
+        border_colors = [get_border_color(color) for color in colors]
         colors = [get_color(color) for color in colors]
         fig.add_trace(
             go.Scatter(
@@ -211,7 +218,7 @@ class ExperimentManager:
                 marker=dict(
                     color=colors,
                     line=dict(
-                        color="black"
+                        color=border_colors
                     )
                 ),
                 marker_line_width=2
@@ -219,25 +226,33 @@ class ExperimentManager:
             row=1, col=1
         )
 
-        def get_color(val):
-            if val:
-                return "black"
+        def get_color(pred, val):
+            if pred:
+                return val
             else:
                 return "red"
+        
+        def get_symbol(val):
+            if val:
+                return "circle"
+            else:
+                return "x"
 
         prediction_eval = self.get_prediction_eval(self.test_x, self.test_y)
         colors = copy.deepcopy(self.test_y)
-        border_colors = [get_color(pred) for pred in prediction_eval]
+        colors = [get_color(pred, val) for pred, val in zip(prediction_eval, colors)]
+        symbols = [get_symbol(pred) for pred in prediction_eval]
         fig.add_trace(
             go.Scatter(
                 x=self.test_x[:, 0], 
                 y=self.test_x[:, 1],
                 mode='markers',
                 marker_line_width=2,
+                marker_symbol=symbols,
                 marker=dict(
                     color=colors,
                     line=dict(
-                        color=border_colors
+                        color=colors
                     )
                 )
             ),
