@@ -3,6 +3,7 @@ import json
 import copy
 from pathlib import Path
 
+import cv2
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -52,7 +53,7 @@ class ExperimentParams:
         self.sha = repo.head.object.hexsha
 
     def save(self, name):
-        with open(name + ".json", "w") as file:
+        with open(str(name) + ".json", "w") as file:
             json.dump(self.__dict__, file)
     
     def load(self, name):
@@ -125,25 +126,33 @@ class ExperimentManager:
 
     def save(self, name):
         """Save all experimental results."""
-        experiment_dir = Path.cwd() / "experiments" / name
 
-        # Make sure experiment dirctory does not already exist
-        if experiment_dir.exists():
-            raise IOError(
-                    "Experimental directory already exists." 
-                    "Please change or delete the directory"
-                )
+        # Make sure experiement directory exists
+        experiment_dir = Path.cwd() / "experiments"
+        if not experiment_dir.exists():
+            experiment_dir.mkdir()
+
+        experiment_dir = experiment_dir / name
         
-        experiment_dir.mkdir()
+        if not experiment_dir.exists():
+            experiment_dir.mkdir()
 
         self.params.save(experiment_dir / "params")
         
         # Save results
         with open(experiment_dir / "results.json", "w") as file:
             json.dump(self.results, file)
-
+        
+        # Write plots to video
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        video_writer = cv2.VideoWriter(str(experiment_dir / "train_test.mp4"), fourcc, 1, (1400, 600))
         for i, fig in enumerate(self.plots):
-            fig.write_image(str(experiment_dir / f"fig{i}.jpeg"))
+            image_filename = str(experiment_dir / f"fig{i}.jpeg")
+            fig.write_image(image_filename)
+            img = cv2.imread(image_filename, cv2.IMREAD_COLOR)
+            video_writer.write(img)
+        video_writer.release()
+        cv2.destroyAllWindows()
 
     def fit(self):
         self.learner.fit(
