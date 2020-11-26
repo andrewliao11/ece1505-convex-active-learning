@@ -96,9 +96,12 @@ class ExperimentManager:
         self.learner = learner_cls()
         
         # Generate data
-        self.train_x, self.train_y = self.simulator.simulate(params.N, params.input_dim)
-        self.test_x, self.test_y = self.simulator.simulate(params.N, params.input_dim)
-
+        X, Y = self.simulator.simulate(2 * params.N, params.input_dim)
+        self.train_x = X[:params.N]
+        self.train_y = Y[:params.N]
+        self.test_x = X[params.N:]
+        self.test_y = Y[params.N:]
+        
         self.sampler = sampler_cls(self.train_x, self.labeled_mask, params)
 
         # Store experiment parameters
