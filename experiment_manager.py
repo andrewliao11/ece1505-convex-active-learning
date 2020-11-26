@@ -8,6 +8,11 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+# Dimensionality reduction
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
 # Our custom classes
 from data.simulation.simulator import Simulator
 from learner import SVMLearner
@@ -48,12 +53,14 @@ class ExperimentParams:
         self.learner = None
         self.simulator = None
         self.sampler = None
+        self.sha = None
+        
+    def save(self, name):
 
         # Set git commit so that we can always come back to it later
         repo = git.Repo(search_parent_directories=True)
         self.sha = repo.head.object.hexsha
 
-    def save(self, name):
         with open(str(name) + ".json", "w") as file:
             json.dump(self.__dict__, file)
     
@@ -103,6 +110,13 @@ class ExperimentManager:
         self.test_y = Y[params.N:]
         
         self.sampler = sampler_cls(self.train_x, self.labeled_mask, params)
+
+        # Dimensionality reducer (LinearDiscriminant Analysis)
+        self.dim_reducer = make_pipeline(
+                StandardScaler(),
+                LinearDiscriminantAnalysis(n_components=2)
+            )
+        self.dim_reducer.fit(X, Y)
 
         # Store experiment parameters
         self.params = params
@@ -225,6 +239,14 @@ class ExperimentManager:
             )
         )
 
+        # Reduce dimensions if needed
+        if self.params.input_dim > 2:
+            train_x = self.dim_reducer.transform(self.train_x)
+            test_x = self.dim_reducer.transform(self.test_x)
+        else:
+            train_x = self.train_x
+            test_x = self.test_x
+
         def get_color(val):
             if val < 0:
                 return "white"
@@ -243,8 +265,8 @@ class ExperimentManager:
         colors = [get_color(color) for color in colors]
         fig.add_trace(
             go.Scatter(
-                x=self.train_x[:, 0], 
-                y=self.train_x[:, 1],
+                x=train_x[:, 0], 
+                y=train_x[:, 1],
                 mode='markers',
                 marker=dict(
                     color=colors,
@@ -275,8 +297,8 @@ class ExperimentManager:
         symbols = [get_symbol(pred) for pred in prediction_eval]
         fig.add_trace(
             go.Scatter(
-                x=self.test_x[:, 0], 
-                y=self.test_x[:, 1],
+                x=test_x[:, 0], 
+                y=test_x[:, 1],
                 mode='markers',
                 marker_line_width=2,
                 marker_symbol=symbols,

@@ -16,7 +16,6 @@ class Simulator():
             # w/ gaussian noise
             X, y = make_moons(n, noise=self.noise)
         if self.data_type == "blob":
-             assert input_dim == 2
              X, y = make_blobs(
                     n_samples=n, 
                     centers=5, 
