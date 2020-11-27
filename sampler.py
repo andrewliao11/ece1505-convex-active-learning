@@ -5,6 +5,7 @@ import cvxpy as cp
 import numpy as np
 from sklearn.metrics.pairwise import rbf_kernel
 from sklearn.cluster import SpectralClustering
+from itertools import combinations 
 
 class Sampler():
     def __init__(self, X, Y, labeled_mask):
@@ -112,3 +113,44 @@ class RandomSampler(Sampler):
     def sample(self, n, **kwargs):
         unlabeled_idx = np.where(~self.labeled_mask)[0]
         return self.npr.choice(unlabeled_idx, n, replace=False)
+
+class OptimalSampler(Sampler):
+    def __init__(self, X, Y, labeled_mask, params):
+        Sampler.__init__(self, X, Y, labeled_mask)
+        self.npr = np.random.RandomState(123)
+        self.params = params
+        self.labeled_mask = labeled_mask
+
+    def sample(self, n, **kwargs):
+        learner = kwargs["learner"]
+        test_x = kwargs["test_x"]
+        test_y = kwargs["test_y"]
+
+        unlabeled_idx = np.where(~self.labeled_mask)[0]
+
+        # Iterate through every possible combination
+        labeled_x = self.X[self.labeled_mask]
+        labeled_y = self.Y[self.labeled_mask]
+        learner.fit(labeled_x, labeled_y)
+        curr_best = (learner.predict(labeled_x) == labeled_y).mean()
+        best_batch = None
+        for i, batch in enumerate(combinations(unlabeled_idx, n)):
+            batch = list(batch)
+            new_x = np.concatenate((labeled_x, self.X[batch]), axis=0)
+            new_y = np.concatenate((labeled_y, self.Y[batch]), axis=0)
+            learner.fit(new_x, new_y)
+            acc = (learner.predict(test_x) == test_y).mean()
+
+            if acc > curr_best:
+                curr_best = acc
+                best_batch = batch
+            
+            # Make tractable
+            if i > 20000:
+                break
+
+        if best_batch:
+            return best_batch
+        else:
+            return self.npr.choice(unlabeled_idx, n, replace=False)
+

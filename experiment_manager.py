@@ -20,6 +20,7 @@ from learner import SVMLearner
 from sampler import (
     CVXSampler, 
     RandomSampler, 
+    OptimalSampler,
 )
 
 
@@ -36,6 +37,7 @@ catalog = {
     "samplers": {
         "CVXSampler": CVXSampler,
         "RandomSampler": RandomSampler,
+        "OptimalSampler": OptimalSampler
     }
 }
 
@@ -219,7 +221,12 @@ class ExperimentManager:
 
     def sample_data_to_label(self):
         """Select new data to label."""
-        return self.sampler.sample(5, learner=self.learner)
+        return self.sampler.sample(
+            5, 
+            learner=self.learner,
+            test_x = self.test_x,
+            test_y = self.test_y
+        )
 
     def label(self):
         """Sample a new set of  """
