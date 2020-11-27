@@ -59,7 +59,7 @@ class CVXSampler(Sampler):
         # Construct convex optimization problem
         n_unlabeled = (~labeled_mask).sum()
         if n_unlabeled <= n:
-            return np.where(labeled_mask == 0)
+            return np.where(labeled_mask == 0)[0]
 
         uncertainty = self.cal_uncertainty(learner, X, labeled_mask)
         diversity = self.cal_diversity(X, labeled_mask)
@@ -102,6 +102,7 @@ class CVXSampler(Sampler):
 
         idx_to_label = np.where(~labeled_mask)[0][representatives]  # Index in the whole set
         return idx_to_label
+
 
 class RandomSampler(Sampler):
     def __init__(self, X, Y, labeled_mask, params):

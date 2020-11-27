@@ -9,7 +9,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 # Dimensionality reduction
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+#from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.manifold import TSNE
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -20,6 +21,7 @@ from sampler import (
     CVXSampler, 
     RandomSampler, 
 )
+
 
 template = "plotly_white"
 
@@ -46,7 +48,6 @@ class ExperimentParams:
         self.datatype = "moon"      # Type of data to use
         self.N = 0                  # Number of datapoints
         self.input_dim = 0          # Dimension of problem
-        self.num_centers = 0        # Number of centers for blob dataset
         self.labeled_ratio = 0      # Ratio of labeled data
         self.sigma = 0              # 
         self.noise = 0              # Noise ratio when generating data
@@ -82,6 +83,7 @@ class ExperimentParams:
         for k in params:
             self.__dict__[k] = params[k]
 
+
 class ExperimentManager:
     """ 
     Holds everything to run an experiement.
@@ -112,7 +114,7 @@ class ExperimentManager:
         sampler_cls = catalog["samplers"][params.sampler]
 
         # Initalize classes
-        self.simulator = simulator_cls(params.datatype, noise=params.noise)
+        self.simulator = simulator_cls(params.datatype, noise=params.noise, K=params.K)
         self.learner = learner_cls()
         
         # Generate data
@@ -121,16 +123,22 @@ class ExperimentManager:
         self.train_y = Y[:params.N]
         self.test_x = X[params.N:]
         self.test_y = Y[params.N:]
-        
+
         self.sampler = sampler_cls(self.train_x, self.train_y, self.labeled_mask, params)
 
         if params.input_dim > 2:
             # Dimensionality reducer (LinearDiscriminant Analysis)
+            '''
             self.dim_reducer = make_pipeline(
                     StandardScaler(),
-                    LinearDiscriminantAnalysis(n_components=2)
+                    #LinearDiscriminantAnalysis(n_components=2)
+                    TSNE(n_components=2, random_state=123)
                 )
             self.dim_reducer.fit(X, Y)
+            '''
+            self._vis_train_x = TSNE(n_components=2, random_state=123).fit_transform(self.train_x)
+            self._vis_test_x = TSNE(n_components=2, random_state=123).fit_transform(self.test_x)
+
 
         # Store experiment parameters
         self.params = params
@@ -142,16 +150,20 @@ class ExperimentManager:
     def run(self):
         """ Run the experiment along with any visualizations and results. """
         print("Running")
-        while int(self.labeled_mask.sum()) < self.params.N:
+
+        while True:
             self.fit()
             self.vis_train_test()
-            self.label()
 
             # Save the results
             self.results.append({
                 "num_labeled": int(self.labeled_mask.sum()),
                 "accuracy": float(self.get_accuracy(self.test_x, self.test_y))
             })
+            if self.labeled_mask.sum() >= self.params.N:
+                break
+        
+            self.label()
         
         self.save()
 
@@ -218,7 +230,7 @@ class ExperimentManager:
         """
         Plots the curve of accuracy vs the number of labeled samples 
         """
-        x = [result["num_labeled"] for result in self.results]
+        x = [100 * result["num_labeled"] / self.params.N for result in self.results]
         y = [result["accuracy"] for result in self.results]
 
         fig = go.Figure(data=go.Scatter(x=x, y=y))
@@ -236,6 +248,7 @@ class ExperimentManager:
             xaxis_title='Labeled (%)',
             yaxis_title='Accuracy (%)'
         )
+        fig.update_layout(yaxis=dict(range=[0, 1]), xaxis=dict(range=[0, 100]))
         fig.write_image(filename)
 
     def vis_train_test(self, title=""):
@@ -246,6 +259,7 @@ class ExperimentManager:
 
         # Get accuracy to put into plot
         acc = self.get_accuracy(self.test_x, self.test_y)
+        print("[{:.2f}%] Accuracy: {:.2f}".format(self.labeled_mask.sum() / len(self.train_x) * 100, acc))
         fig = make_subplots(
             rows=1, cols=2,
             subplot_titles = (
@@ -256,8 +270,10 @@ class ExperimentManager:
 
         # Reduce dimensions if needed
         if self.params.input_dim > 2:
-            train_x = self.dim_reducer.transform(self.train_x)
-            test_x = self.dim_reducer.transform(self.test_x)
+            #train_x = self.dim_reducer.transform(self.train_x)
+            #test_x = self.dim_reducer.transform(self.test_x)
+            train_x = self._vis_train_x
+            test_x = self._vis_test_x
         else:
             train_x = self.train_x
             test_x = self.test_x
@@ -330,7 +346,6 @@ class ExperimentManager:
         fig.update_xaxes(showline=True, linewidth=1.5, linecolor='Black', mirror=True, row=1, col=1)
         fig.update_xaxes(showline=True, linewidth=1.5, linecolor='Black', mirror=True, row=1, col=2)
 
-
         fig.update_yaxes(showline=True, linewidth=1.5, linecolor='Black', mirror=True, row=1, col=1)
         fig.update_yaxes(showline=True, linewidth=1.5, linecolor='Black', mirror=True, row=1, col=2)
 
@@ -354,6 +369,7 @@ def run_experiments(experiments_to_run:list=None):
     if experiment_dir.exists():
         for experiement in experiment_dir.iterdir():
             if experiement.is_dir():
+                
                 params_json = experiement / "params.json"
                 results_json = experiement / "results.json"
 
@@ -364,10 +380,11 @@ def run_experiments(experiments_to_run:list=None):
                     else:
                         run_experiement = False
                 else:
-                    run_experiement = params_json.exists() and not results_json.exists()
+                    run_experiement = params_json.exists()# and not results_json.exists()
 
                 # If an experiment is specified but has not been run
                 if run_experiement:
+                    print("Run Experiment: {}".format(experiement))
                     params = ExperimentParams()
                     params.load(str(params_json))
 
