@@ -21,6 +21,7 @@ class CVXSampler(Sampler):
         Sampler.__init__(self, X, Y, labeled_mask)
         self.K = params.K          # Number of classes
         self.confidence_type = params.confidence_type
+        self.clustering_type = params.clutering_type
         self.sigma = params.sigma
         self.alpha = params.alpha  # Balance the two costs
         self.Z = None
@@ -82,19 +83,23 @@ class CVXSampler(Sampler):
         
         self.Z = Z.value
 
-        clustering_labels = SpectralClustering(n_clusters=n,
-            assign_labels="discretize",
-            random_state=0).fit(Z.value).labels_
+        if self.clustering_type == "spectral":
 
-        indices_by_cluster = {
-            i: [] for i in range(n)
-        }
-        for i, label in enumerate(clustering_labels):
-            indices_by_cluster[label].append(i)
+            clustering_labels = SpectralClustering(n_clusters=n,
+                assign_labels="discretize",
+                random_state=0).fit(Z.value).labels_
 
-        representatives = [inidices[0] for inidices in indices_by_cluster.values() if len(inidices) > 0]
+            indices_by_cluster = {
+                i: [] for i in range(n)
+            }
+            for i, label in enumerate(clustering_labels):
+                indices_by_cluster[label].append(i)
 
-        # representatives = np.unique(Z.value.argmax(0))  # Index in unlabeled set
+            representatives = [inidices[0] for inidices in indices_by_cluster.values() if len(inidices) > 0]
+        
+        else:
+            representatives = np.unique(Z.value.argmax(0))  # Index in unlabeled set
+            
         idx_to_label = np.where(~labeled_mask)[0][representatives]  # Index in the whole set
         return idx_to_label
 

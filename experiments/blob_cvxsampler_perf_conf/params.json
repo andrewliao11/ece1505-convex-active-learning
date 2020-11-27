@@ -14,5 +14,6 @@
     "sampler": "CVXSampler",
     "sha": "16f2e11fafa4ab8f26bf0bbd7b29c8cbec0825a5",
     "confidence_type": "perfect",
-    "diversity_type": null
+    "diversity_type": null,
+    "clustering_type": "spectral"
 }

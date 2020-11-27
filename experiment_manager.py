@@ -63,6 +63,9 @@ class ExperimentParams:
         self.confidence_type = None
         self.diversity_type = None
 
+        # what kind of clustering to use
+        self.clustering_type = None
+
     def save(self, name):
 
         # Set git commit so that we can always come back to it later
