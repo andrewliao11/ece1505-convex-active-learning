@@ -37,7 +37,7 @@ class CVXSampler(Sampler):
 
         # None
         else:   
-            return np.ones(len(~labeled_mask))
+            return np.ones(len(X[~labeled_mask]))
 
     def cal_diversity(self, X, labeled_mask):
         s = rbf_kernel(X[~labeled_mask], X[labeled_mask])
