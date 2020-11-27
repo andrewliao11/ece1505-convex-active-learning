@@ -16,7 +16,10 @@ from sklearn.preprocessing import StandardScaler
 # Our custom classes
 from data.simulation.simulator import Simulator
 from learner import SVMLearner
-from sampler import CVXSampler, RandomSampler, CVXSamplerNoConfidence
+from sampler import (
+    CVXSampler, 
+    RandomSampler, 
+)
 
 template = "plotly_white"
 
@@ -31,7 +34,6 @@ catalog = {
     "samplers": {
         "CVXSampler": CVXSampler,
         "RandomSampler": RandomSampler,
-        "CVXSamplerNoConfidence": CVXSamplerNoConfidence
     }
 }
 
@@ -40,9 +42,11 @@ class ExperimentParams:
     Holds all the experiment parameters 
     """
     def __init__(self):
+        self.name = ""
         self.datatype = "moon"      # Type of data to use
         self.N = 0                  # Number of datapoints
         self.input_dim = 0          # Dimension of problem
+        self.num_centers = 0        # Number of centers for blob dataset
         self.labeled_ratio = 0      # Ratio of labeled data
         self.sigma = 0              # 
         self.noise = 0              # Noise ratio when generating data
@@ -54,7 +58,11 @@ class ExperimentParams:
         self.simulator = None
         self.sampler = None
         self.sha = None
-        
+
+        # What kind of perterbation to use
+        self.confidence_type = None
+        self.diversity_type = None
+
     def save(self, name):
 
         # Set git commit so that we can always come back to it later
@@ -67,7 +75,9 @@ class ExperimentParams:
     def load(self, name):
         with open(name, "r") as file:
             params = json.load(file)
-        self.__dict__ = params
+        
+        for k in params:
+            self.__dict__[k] = params[k]
 
 class ExperimentManager:
     """ 
@@ -109,7 +119,7 @@ class ExperimentManager:
         self.test_x = X[params.N:]
         self.test_y = Y[params.N:]
         
-        self.sampler = sampler_cls(self.train_x, self.labeled_mask, params)
+        self.sampler = sampler_cls(self.train_x, self.train_y, self.labeled_mask, params)
 
         # Dimensionality reducer (LinearDiscriminant Analysis)
         self.dim_reducer = make_pipeline(
@@ -125,7 +135,7 @@ class ExperimentManager:
         self.results = []
         self.plots = []
     
-    def run(self, experiment_name):
+    def run(self):
         """ Run the experiment along with any visualizations and results. """
         print("Running")
         while int(self.labeled_mask.sum()) < self.params.N:
@@ -139,9 +149,9 @@ class ExperimentManager:
                 "accuracy": float(self.get_accuracy(self.test_x, self.test_y))
             })
         
-        self.save(experiment_name)
+        self.save()
 
-    def save(self, name):
+    def save(self):
         """Save all experimental results."""
 
         # Make sure experiement directory exists
@@ -149,7 +159,7 @@ class ExperimentManager:
         if not experiment_dir.exists():
             experiment_dir.mkdir()
 
-        experiment_dir = experiment_dir / name
+        experiment_dir = experiment_dir / self.params.name
         
         if not experiment_dir.exists():
             experiment_dir.mkdir()
@@ -168,10 +178,11 @@ class ExperimentManager:
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         video_writer = cv2.VideoWriter(str(experiment_dir / "train_test.mp4"), fourcc, 1, (1400, 600))
         for i, fig in enumerate(self.plots):
-            image_filename = str(experiment_dir / f"fig{i}.jpeg")
-            fig.write_image(image_filename)
-            img = cv2.imread(image_filename, cv2.IMREAD_COLOR)
+            image_filename = experiment_dir / f"fig{i}.jpeg"
+            fig.write_image(str(image_filename))
+            img = cv2.imread(str(image_filename), cv2.IMREAD_COLOR)
             video_writer.write(img)
+            image_filename.unlink()
         video_writer.release()
         cv2.destroyAllWindows()
 
@@ -324,10 +335,16 @@ class ExperimentManager:
         self.plots.append(fig)
 
 
-def run_experiments():
+def run_experiments(experiments_to_run:list=None):
     """
     Run all experiments in the experiments folder that have 
     their params.json specified but have no results.
+
+    Parameters
+    ----------
+    experiments_to_run: List of experiement folders to run if specified.
+    will override previous results if there are any.
+
     """
     experiment_dir = Path.cwd() / "experiments"
     if experiment_dir.exists():
@@ -336,10 +353,19 @@ def run_experiments():
                 params_json = experiement / "params.json"
                 results_json = experiement / "results.json"
 
+
+                if experiments_to_run:
+                    if experiement.name in experiments_to_run:
+                        run_experiement = True
+                    else:
+                        run_experiement = False
+                else:
+                    run_experiement = params_json.exists() and not results_json.exists()
+
                 # If an experiment is specified but has not been run
-                if params_json.exists() and not results_json.exists():
+                if run_experiement:
                     params = ExperimentParams()
                     params.load(str(params_json))
 
                     experiment_manager = ExperimentManager(params)
-                    experiment_manager.run(experiement.name)
+                    experiment_manager.run()
