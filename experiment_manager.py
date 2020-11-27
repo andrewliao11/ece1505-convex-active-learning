@@ -124,12 +124,13 @@ class ExperimentManager:
         
         self.sampler = sampler_cls(self.train_x, self.train_y, self.labeled_mask, params)
 
-        # Dimensionality reducer (LinearDiscriminant Analysis)
-        self.dim_reducer = make_pipeline(
-                StandardScaler(),
-                LinearDiscriminantAnalysis(n_components=2)
-            )
-        self.dim_reducer.fit(X, Y)
+        if params.input_dim > 2:
+            # Dimensionality reducer (LinearDiscriminant Analysis)
+            self.dim_reducer = make_pipeline(
+                    StandardScaler(),
+                    LinearDiscriminantAnalysis(n_components=2)
+                )
+            self.dim_reducer.fit(X, Y)
 
         # Store experiment parameters
         self.params = params
