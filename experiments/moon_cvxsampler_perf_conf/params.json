@@ -1,5 +1,5 @@
 {
-    "name": "moon_cvxsampler",
+    "name": "moon_cvxsampler_perf_conf",
     "datatype": "moon",
     "N": 100,
     "input_dim": 2,
@@ -12,6 +12,6 @@
     "simulator": "Simulator",
     "sampler": "CVXSampler",
     "sha": "cb66721c76571fdcb4f00e143f5d3d44f36f6f0a",
-    "confidence_type": "learner",
+    "confidence_type": "perfect",
     "diversity_type": null
 }

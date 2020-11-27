@@ -1,8 +1,9 @@
 {
-    "name": "moon_cvxsampler",
-    "datatype": "moon",
+    "name": "blob_cvxsampler_no_conf",
+    "datatype": "blob",
     "N": 100,
-    "input_dim": 2,
+    "input_dim": 4,
+    "num_centers": 5,
     "labeled_ratio": 0.05,
     "sigma": 5,
     "noise": 0.4,
@@ -11,7 +12,7 @@
     "learner": "SVMLearner",
     "simulator": "Simulator",
     "sampler": "CVXSampler",
-    "sha": "cb66721c76571fdcb4f00e143f5d3d44f36f6f0a",
-    "confidence_type": "learner",
+    "sha": "16f2e11fafa4ab8f26bf0bbd7b29c8cbec0825a5",
+    "confidence_type": "none",
     "diversity_type": null
 }

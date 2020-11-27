@@ -1,1 +1,17 @@
-{"datatype": "moon", "N": 100, "input_dim": 2, "labeled_ratio": 0.1, "sigma": 5, "noise": 0.4, "alpha": 1, "K": 2, "learner": "SVMLearner", "simulator": "Simulator", "sampler": "RandomSampler", "sha": "cb66721c76571fdcb4f00e143f5d3d44f36f6f0a"}
+{
+    "name": "moon_randomsampler",
+    "datatype": "moon",
+    "N": 100,
+    "input_dim": 2,
+    "labeled_ratio": 0.05,
+    "sigma": 5,
+    "noise": 0.4,
+    "alpha": 1,
+    "K": 2,
+    "learner": "SVMLearner",
+    "simulator": "Simulator",
+    "sampler": "RandomSampler",
+    "sha": "cb66721c76571fdcb4f00e143f5d3d44f36f6f0a",
+    "confidence_type": "learner",
+    "diversity_type": null
+}
