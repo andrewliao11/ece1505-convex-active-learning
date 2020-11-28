@@ -11,8 +11,8 @@
     "learner": "SVMLearner",
     "simulator": "Simulator",
     "sampler": "CVXSampler",
-    "sha": "16303184e95b5d7805eabb2bf09cb477053ef911",
+    "sha": "6a5b6cdb5edc92d3f19014410fc7ceac5c45d3d8",
     "confidence_type": "none",
     "diversity_type": null,
-    "clustering_type": "None"
+    "clustering_type": "Spectral"
 }

@@ -1,18 +1,1 @@
-{
-    "name": "blob_optimalsampler",
-    "datatype": "blob",
-    "N": 100,
-    "input_dim": 2,
-    "labeled_ratio": 0.05,
-    "sigma": 5,
-    "noise": 0.4,
-    "alpha": 1,
-    "K": 10,
-    "learner": "SVMLearner",
-    "simulator": "Simulator",
-    "sampler": "OptimalSampler",
-    "sha": "a1d339e810cfafb58377df151922c83f6ae21ddb",
-    "confidence_type": "learner",
-    "diversity_type": null,
-    "clustering_type": "spectral"
-}
+{"name": "blob_optimalsampler", "datatype": "blob", "N": 100, "input_dim": 2, "labeled_ratio": 0.05, "sigma": 5, "noise": 0.4, "alpha": 1, "K": 10, "learner": "SVMLearner", "simulator": "Simulator", "sampler": "OptimalSampler", "sha": "6a5b6cdb5edc92d3f19014410fc7ceac5c45d3d8", "confidence_type": "learner", "diversity_type": null, "clustering_type": "spectral"}
