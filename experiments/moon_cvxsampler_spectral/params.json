@@ -1,0 +1,1 @@
+{"name": "moon_cvxsampler_spectral", "datatype": "moon", "N": 100, "input_dim": 2, "labeled_ratio": 0.05, "sigma": 5, "noise": 0.4, "alpha": 1, "K": 2, "learner": "SVMLearner", "simulator": "Simulator", "sampler": "CVXSampler", "sha": "40bf2d386db0a10dc1609477d443e77b29486b6d", "confidence_type": "learner", "diversity_type": null, "clustering_type": "spectral"}
