@@ -129,15 +129,6 @@ class ExperimentManager:
         self.sampler = sampler_cls(self.train_x, self.train_y, self.labeled_mask, params)
 
         if params.input_dim > 2:
-            # Dimensionality reducer (LinearDiscriminant Analysis)
-            '''
-            self.dim_reducer = make_pipeline(
-                    StandardScaler(),
-                    #LinearDiscriminantAnalysis(n_components=2)
-                    TSNE(n_components=2, random_state=123)
-                )
-            self.dim_reducer.fit(X, Y)
-            '''
             self._vis_train_x = TSNE(n_components=2, random_state=123).fit_transform(self.train_x)
             self._vis_test_x = TSNE(n_components=2, random_state=123).fit_transform(self.test_x)
 
@@ -159,7 +150,7 @@ class ExperimentManager:
 
             # Save the results
             self.results.append({
-                "num_labeled": int(self.labeled_mask.sum()),
+                "perc_labeled": float(self.labeled_mask.sum()) / self.params.N,
                 "accuracy": float(self.get_accuracy(self.test_x, self.test_y))
             })
             if self.labeled_mask.sum() >= self.params.N:
@@ -237,7 +228,7 @@ class ExperimentManager:
         """
         Plots the curve of accuracy vs the number of labeled samples 
         """
-        x = [100 * result["num_labeled"] / self.params.N for result in self.results]
+        x = [100 * result["perc_labeled"] for result in self.results]
         y = [result["accuracy"] for result in self.results]
 
         fig = go.Figure(data=go.Scatter(x=x, y=y))
@@ -277,8 +268,6 @@ class ExperimentManager:
 
         # Reduce dimensions if needed
         if self.params.input_dim > 2:
-            #train_x = self.dim_reducer.transform(self.train_x)
-            #test_x = self.dim_reducer.transform(self.test_x)
             train_x = self._vis_train_x
             test_x = self._vis_test_x
         else:
@@ -361,33 +350,41 @@ class ExperimentManager:
         self.plots.append(fig)
 
 
-def run_experiments(experiments_to_run:list=None):
+def run_experiments(experiments_to_run:list=None, override=True):
     """
     Run all experiments in the experiments folder that have 
     their params.json specified but have no results.
 
     Parameters
     ----------
-    experiments_to_run: List of experiement folders to run if specified.
+    experiments_to_run: list
+    List of experiement folders to run if specified.
     will override previous results if there are any.
+
+    override: bool
+    To override previous results or not.
 
     """
     experiment_dir = Path.cwd() / "experiments"
     if experiment_dir.exists():
-        for experiement in experiment_dir.iterdir():
+        if experiments_to_run:
+            experiments = [
+                experiment_dir / experiment
+                for experiment in experiments_to_run
+            ]
+        else:
+            experiments = experiment_dir.iterdir()
+
+        for experiement in experiments:
             if experiement.is_dir():
                 
                 params_json = experiement / "params.json"
                 results_json = experiement / "results.json"
 
-
-                if experiments_to_run:
-                    if experiement.name in experiments_to_run:
-                        run_experiement = True
-                    else:
-                        run_experiement = False
+                if override:
+                    run_experiement = True
                 else:
-                    run_experiement = params_json.exists()# and not results_json.exists()
+                    run_experiement = params_json.exists() and not results_json.exists()
 
                 # If an experiment is specified but has not been run
                 if run_experiement:
@@ -397,3 +394,57 @@ def run_experiments(experiments_to_run:list=None):
 
                     experiment_manager = ExperimentManager(params)
                     experiment_manager.run()
+
+def compare_experiments(experiements_to_compare, comparison_name):
+    """
+    Plot the results from each experiment against each other.
+    """
+
+    # Make sure all experiements are run
+    run_experiments(experiements_to_compare, override=False)
+
+    # Store results from each experiement by name
+    results_by_experiment = {}
+
+    # Grab results from each experiment
+    experiment_dir = Path.cwd() / "experiments"
+    for experiement_name in experiements_to_compare:
+        experiment = experiment_dir / experiement_name
+        if experiment.is_dir():
+            results_file = experiment / "results.json"
+            with open(str(results_file), "r") as file:
+                results = json.load(file)
+            
+            results_by_experiment[experiment.name] = results
+    
+    # Plot Results
+    fig = go.Figure()
+    fig.update_layout(template=template)
+    fig.update_layout(
+        width=800, 
+        height=600, 
+        legend_title="Experiments",
+        xaxis_title='Labeled (%)',
+        yaxis_title='Accuracy (%)',
+        yaxis=dict(range=[0, 1]), 
+        xaxis=dict(range=[0, 100])
+    )
+
+    for experiment in results_by_experiment:
+        results = results_by_experiment[experiment]
+
+        x = [100 * result["perc_labeled"] for result in results]
+        y = [result["accuracy"] for result in results]
+        fig.add_trace(
+            go.Scatter(
+                x=x, 
+                y=y,
+                name=experiment
+            ),
+        )
+
+    plots_dir = Path.cwd() / "plots"
+    if not plots_dir.exists():
+        plots_dir.mkdir()
+    
+    fig.write_image(str(plots_dir / comparison_name))
