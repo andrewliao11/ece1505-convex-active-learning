@@ -23,6 +23,7 @@ class CVXSampler(Sampler):
         self.K = params.K          # Number of classes
         self.confidence_type = params.confidence_type
         self.clustering_type = params.clustering_type
+        self.diversity_type = params.diversity_type
         self.sigma = params.sigma
         self.alpha = params.alpha  # Balance the two costs
         self.Z = None
@@ -45,11 +46,17 @@ class CVXSampler(Sampler):
         s = rbf_kernel(X[~labeled_mask], X[labeled_mask])
         d = s.max() - s
         diversity = self.sigma - (self.sigma - 1) * d.min(1) / d.min(1).max()
+
         return diversity 
 
     def cal_dissimilarity_over_unlabeled_set(self, X, labeled_mask):
-        s = rbf_kernel(X[~labeled_mask])
-        d = s.max() - s
+
+        if self.diversity_type == "optimal":
+            labels = self.Y[~labeled_mask].reshape(-1,1)
+            d = (labels.T != labels).astype(np.float)
+        else:
+            s = rbf_kernel(X[~labeled_mask])
+            d = s.max() - s
         return d
 
     def sample(self, n, **kwargs):
@@ -146,7 +153,7 @@ class OptimalSampler(Sampler):
                 best_batch = batch
             
             # Make tractable
-            if i > 20000:
+            if i > 10000:
                 break
 
         if best_batch:
