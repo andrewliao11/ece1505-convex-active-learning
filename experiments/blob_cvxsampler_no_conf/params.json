@@ -1,1 +1,18 @@
-{"name": "blob_cvxsampler_no_conf", "datatype": "blob", "N": 100, "input_dim": 2, "labeled_ratio": 0.05, "sigma": 5, "noise": 0.4, "alpha": 1, "K": 10, "learner": "SVMLearner", "simulator": "Simulator", "sampler": "CVXSampler", "sha": "a1d339e810cfafb58377df151922c83f6ae21ddb", "confidence_type": "none", "diversity_type": null, "clustering_type": "spectral"}
+{
+    "name": "blob_cvxsampler_no_conf",
+    "datatype": "blob",
+    "N": 100,
+    "input_dim": 2,
+    "labeled_ratio": 0.05,
+    "sigma": 5,
+    "noise": 0.4,
+    "alpha": 1,
+    "K": 10,
+    "learner": "SVMLearner",
+    "simulator": "Simulator",
+    "sampler": "CVXSampler",
+    "sha": "16303184e95b5d7805eabb2bf09cb477053ef911",
+    "confidence_type": "none",
+    "diversity_type": null,
+    "clustering_type": "None"
+}
