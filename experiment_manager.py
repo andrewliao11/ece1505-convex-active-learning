@@ -423,11 +423,20 @@ def compare_experiments(experiements_to_compare, comparison_name):
     fig.update_layout(
         width=800, 
         height=600, 
-        legend_title="Experiments",
         xaxis_title='Labeled (%)',
         yaxis_title='Accuracy (%)',
         yaxis=dict(range=[0, 1]), 
-        xaxis=dict(range=[0, 100])
+        xaxis=dict(range=[0, 100]),
+        legend=dict(
+            yanchor="bottom",
+            y=0.01,
+            xanchor="right",
+            x=0.99,
+        ),
+        margin=dict(l=5, r=5, t=5, b=5),
+        font=dict(
+            size=24,
+        )
     )
 
     for experiment in results_by_experiment:
