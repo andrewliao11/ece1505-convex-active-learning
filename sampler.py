@@ -6,6 +6,8 @@ import numpy as np
 from sklearn.metrics.pairwise import rbf_kernel
 from sklearn.cluster import SpectralClustering
 from itertools import combinations 
+import ipdb
+
 
 class Sampler():
     def __init__(self, X, Y, labeled_mask):
@@ -29,18 +31,31 @@ class CVXSampler(Sampler):
         self.Z = None
 
     def cal_uncertainty(self, learner, X, labeled_mask):
+        
         if self.confidence_type == "learner":
             prob = learner.predict_proba(X[~labeled_mask])
-            entropy = scipy.stats.entropy(prob, axis=1)
-            return self.sigma - (self.sigma - 1) * entropy / np.log(self.K)
+        elif self.confidence_type == "perfect_onehot_prob":
+            pred = learner.predict(X[~labeled_mask])
+            correct = pred == self.Y[~labeled_mask]
+            n_unlabeled = (~labeled_mask).sum()
+            prob = np.zeros([n_unlabeled, self.K])
 
-        if self.confidence_type == "perfect":
-            prob = learner.predict(X[~labeled_mask]) == self.Y[~labeled_mask]
-            return self.sigma * prob
+            prob[correct, pred[correct]] = 1.
+            prob[~correct] = 1/self.K
+        elif self.confidence_type == "perfect_distributional_prob": 
+            prob = learner.predict_proba(X[~labeled_mask])
+            # calibrate the probability of each bin so as to retain the "distributional" information
+            prob = learner.calibrate_bin(prob, self.Y[~labeled_mask])
+        else:
+            # None
+            prob = np.ones([len(X[~labeled_mask]), self.K]) / self.K
 
-        # None
-        else:   
-            return np.ones(len(X[~labeled_mask]))
+        entropy = scipy.stats.entropy(prob, axis=1)
+        uncertainty = self.sigma - (self.sigma - 1) * entropy / np.log(self.K)
+        ece = learner.cal_ece(prob, self.Y[~labeled_mask])
+        print("ECE: {:.2f}".format(ece))
+        
+        return uncertainty
 
     def cal_diversity(self, X, labeled_mask):
         s = rbf_kernel(X[~labeled_mask], X[labeled_mask])
@@ -120,6 +135,7 @@ class RandomSampler(Sampler):
     def sample(self, n, **kwargs):
         unlabeled_idx = np.where(~self.labeled_mask)[0]
         return self.npr.choice(unlabeled_idx, n, replace=False)
+
 
 class OptimalSampler(Sampler):
     def __init__(self, X, Y, labeled_mask, params):

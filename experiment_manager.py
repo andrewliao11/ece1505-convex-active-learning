@@ -117,7 +117,7 @@ class ExperimentManager:
 
         # Initalize classes
         self.simulator = simulator_cls(params.datatype, noise=params.noise, K=params.K)
-        self.learner = learner_cls()
+        self.learner = learner_cls(params.K)
         
         # Generate data
         X, Y = self.simulator.simulate(2 * params.N, params.input_dim)
@@ -395,13 +395,14 @@ def run_experiments(experiments_to_run:list=None, override=True):
                     experiment_manager = ExperimentManager(params)
                     experiment_manager.run()
 
+
 def compare_experiments(experiements_to_compare, comparison_name):
     """
     Plot the results from each experiment against each other.
     """
 
     # Make sure all experiements are run
-    run_experiments(experiements_to_compare, override=False)
+    run_experiments(experiements_to_compare, override=True)
 
     # Store results from each experiement by name
     results_by_experiment = {}
@@ -411,6 +412,7 @@ def compare_experiments(experiements_to_compare, comparison_name):
     for experiement_name in experiements_to_compare:
         experiment = experiment_dir / experiement_name
         if experiment.is_dir():
+            print("Load {}".format(experiment))
             results_file = experiment / "results.json"
             with open(str(results_file), "r") as file:
                 results = json.load(file)
@@ -443,7 +445,7 @@ def compare_experiments(experiements_to_compare, comparison_name):
         results = results_by_experiment[experiment]
 
         x = [100 * result["perc_labeled"] for result in results]
-        y = [result["accuracy"] for result in results]
+        y = [100 * result["accuracy"] for result in results]
         fig.add_trace(
             go.Scatter(
                 x=x, 
