@@ -5,6 +5,9 @@ from experiment_manager import (
     compare_experiments
 )
 
+# To make sure you're running the latest, you can comment this out.
+run_experiments(experiements_to_compare, override=True)
+
 experiments_to_compare = [
     "blob_cvxsampler_argmax",
     "blob_cvxsampler_spectral"
