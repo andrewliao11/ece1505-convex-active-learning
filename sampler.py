@@ -6,7 +6,6 @@ import numpy as np
 from sklearn.metrics.pairwise import rbf_kernel
 from sklearn.cluster import SpectralClustering
 from itertools import combinations 
-import ipdb
 
 
 class Sampler():
