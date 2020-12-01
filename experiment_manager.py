@@ -104,11 +104,6 @@ class ExperimentManager:
 
         # Make sure parameters make sense
         assert params.sigma > 1.
-
-        # Initalize labeled data
-        self.num_labeled = int(params.labeled_ratio * params.N)
-        self.labeled_mask = np.zeros(params.N).astype(np.bool)
-        self.labeled_mask[:self.num_labeled] = True
         
         # Extract experiment classes
         simulator_cls = catalog["simulators"][params.simulator]
@@ -126,6 +121,24 @@ class ExperimentManager:
         self.test_x = X[params.N:]
         self.test_y = Y[params.N:]
 
+
+        # Initalize labeled data
+        self.labeled_mask = np.zeros(params.N).astype(np.bool)
+
+        # Ensure all classes have at least on annotation
+
+        n_labeled = int(max(params.labeled_ratio * params.N, params.K))
+        n_labeled_per_class = np.ones(params.K)
+        self.npr = np.random.RandomState(123)
+        for _ in range(n_labeled - int(n_labeled_per_class.sum())):
+            i = self.npr.choice(params.K)
+            n_labeled_per_class[i] += 1
+
+        for n, c in zip(n_labeled_per_class, range(params.K)):
+            idx = np.where(self.train_y == c)[0]
+            idx = self.npr.choice(idx, int(n))
+            self.labeled_mask[idx] = True
+        
         self.sampler = sampler_cls(self.train_x, self.train_y, self.labeled_mask, params)
 
         if params.input_dim > 2:
@@ -419,6 +432,7 @@ def compare_experiments(experiements_to_compare, comparison_name):
             
             results_by_experiment[experiment.name] = results
     
+
     # Plot Results
     fig = go.Figure()
     fig.update_layout(template=template)
@@ -427,7 +441,7 @@ def compare_experiments(experiements_to_compare, comparison_name):
         height=600, 
         xaxis_title='Labeled (%)',
         yaxis_title='Accuracy (%)',
-        yaxis=dict(range=[0, 1]), 
+        yaxis=dict(range=[0, 100]), 
         xaxis=dict(range=[0, 100]),
         legend=dict(
             yanchor="bottom",
@@ -443,6 +457,7 @@ def compare_experiments(experiements_to_compare, comparison_name):
 
     for experiment in results_by_experiment:
         results = results_by_experiment[experiment]
+
 
         x = [100 * result["perc_labeled"] for result in results]
         y = [100 * result["accuracy"] for result in results]
