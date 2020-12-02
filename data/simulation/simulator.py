@@ -20,9 +20,11 @@ class Simulator():
         elif self.data_type == "blob":
             # not equally distributed
             _n = self.npr.randint(n, size=self.K)
+            _n += int(_n.mean())
             _n = (_n / (_n.sum() / n)).astype(np.int)
             idx = self.npr.choice(self.K)
             _n[idx] -= _n.sum() - n
+
             X, y = make_blobs(
                     n_samples=_n, 
                     #centers=self.K, 
