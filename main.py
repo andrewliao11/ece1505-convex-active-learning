@@ -5,6 +5,15 @@ from experiment_manager import (
     compare_experiments
 )
 
+
+experiments_to_compare = [
+    "blob_randomsampler", 
+    "blob_cvxsampler_argmax",
+]
+
+compare_experiments(experiments_to_compare, "temp2.pdf")
+
+'''
 experiments_to_compare = [
     "blob_cvxsampler_argmax",
     "blob_cvxsampler_spectral"
@@ -32,3 +41,4 @@ experiments_to_compare = [
 ]
 compare_experiments(experiments_to_compare, "blob_cvx.pdf")
 
+'''

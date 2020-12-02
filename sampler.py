@@ -6,14 +6,16 @@ import numpy as np
 from sklearn.metrics.pairwise import rbf_kernel
 from sklearn.cluster import SpectralClustering
 from itertools import combinations 
+from sklearn.manifold import TSNE
 import ipdb
 
 
 class Sampler():
-    def __init__(self, X, Y, labeled_mask):
+    def __init__(self, X, Y, labeled_mask, params):
         self.X = X
         self.Y = Y
         self.labeled_mask = labeled_mask
+        self.npr = np.random.RandomState(params.seed)
         
     def sample(self, n, **kwargs):
         raise NotImplementedError
@@ -21,7 +23,7 @@ class Sampler():
 
 class CVXSampler(Sampler):
     def __init__(self, X, Y, labeled_mask, params):
-        Sampler.__init__(self, X, Y, labeled_mask)
+        Sampler.__init__(self, X, Y, labeled_mask, params)
         self.K = params.K          # Number of classes
         self.confidence_type = params.confidence_type
         self.clustering_type = params.clustering_type
@@ -129,18 +131,19 @@ class CVXSampler(Sampler):
 
 class RandomSampler(Sampler):
     def __init__(self, X, Y, labeled_mask, params):
-        Sampler.__init__(self, X, Y, labeled_mask)
-        self.npr = np.random.RandomState(123)
+        Sampler.__init__(self, X, Y, labeled_mask, params)
 
     def sample(self, n, **kwargs):
         unlabeled_idx = np.where(~self.labeled_mask)[0]
-        return self.npr.choice(unlabeled_idx, n, replace=False)
+        if len(unlabeled_idx) > n:
+            return self.npr.choice(unlabeled_idx, n, replace=False)
+        else:
+            return unlabeled_idx
 
 
 class OptimalSampler(Sampler):
     def __init__(self, X, Y, labeled_mask, params):
-        Sampler.__init__(self, X, Y, labeled_mask)
-        self.npr = np.random.RandomState(123)
+        Sampler.__init__(self, X, Y, labeled_mask, params)
         self.params = params
         self.labeled_mask = labeled_mask
 

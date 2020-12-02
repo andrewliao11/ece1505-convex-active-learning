@@ -16,7 +16,7 @@ from sklearn.preprocessing import StandardScaler
 
 # Our custom classes
 from data.simulation.simulator import Simulator
-from learner import SVMLearner
+from learner import SVMLearner, LPLearner
 from sampler import (
     CVXSampler, 
     RandomSampler, 
@@ -29,7 +29,8 @@ template = "plotly_white"
 # Hold all objects used in experiments.
 catalog = {
     "learners": {
-        "SVMLearner": SVMLearner
+        "SVMLearner": SVMLearner, 
+        "LPLearner": LPLearner
     },
     "simulators": {
         "Simulator": Simulator
@@ -55,6 +56,7 @@ class ExperimentParams:
         self.noise = 0              # Noise ratio when generating data
         self.alpha = 0              # 
         self.K = 1
+        self.seed = 123
 
         # Which simulator and learner to use
         self.learner = None
@@ -111,25 +113,36 @@ class ExperimentManager:
         sampler_cls = catalog["samplers"][params.sampler]
 
         # Initalize classes
-        self.simulator = simulator_cls(params.datatype, noise=params.noise, K=params.K)
-        self.learner = learner_cls(params.K)
+        self.simulator = simulator_cls(params.datatype, noise=params.noise, K=params.K, seed=params.seed)
+        self.learner = learner_cls(params.K, params.seed)
+        self.npr = np.random.RandomState(params.seed)
         
         # Generate data
-        X, Y = self.simulator.simulate(2 * params.N, params.input_dim)
-        self.train_x = X[:params.N]
-        self.train_y = Y[:params.N]
-        self.test_x = X[params.N:]
-        self.test_y = Y[params.N:]
+        X, Y = self.simulator.simulate(10 * params.N, params.input_dim)
+        valid = False
+        for _ in range(100):
+            train_mask = np.zeros(len(X)).astype(np.bool)  
+            idx = self.npr.choice(range(len(X)), params.N, replace=False)
+            train_mask[idx] = True
+            if len(np.unique(Y[train_mask])) == params.K and \
+                    len(np.unique(Y[~train_mask])) == params.K:
+                valid = True
+                break
+
+        assert valid, print("The data is too imbalanced")
+        
+        self.train_x = X[train_mask]
+        self.train_y = Y[train_mask]
+        self.test_x = X[~train_mask]
+        self.test_y = Y[~train_mask]
 
 
         # Initalize labeled data
         self.labeled_mask = np.zeros(params.N).astype(np.bool)
 
         # Ensure all classes have at least on annotation
-
         n_labeled = int(max(params.labeled_ratio * params.N, params.K))
         n_labeled_per_class = np.ones(params.K)
-        self.npr = np.random.RandomState(123)
         for _ in range(n_labeled - int(n_labeled_per_class.sum())):
             i = self.npr.choice(params.K)
             n_labeled_per_class[i] += 1
@@ -142,8 +155,8 @@ class ExperimentManager:
         self.sampler = sampler_cls(self.train_x, self.train_y, self.labeled_mask, params)
 
         if params.input_dim > 2:
-            self._vis_train_x = TSNE(n_components=2, random_state=123).fit_transform(self.train_x)
-            self._vis_test_x = TSNE(n_components=2, random_state=123).fit_transform(self.test_x)
+            self._vis_train_x = TSNE(n_components=2, random_state=params.seed).fit_transform(self.train_x)
+            self._vis_test_x = TSNE(n_components=2, random_state=params.seed).fit_transform(self.test_x)
 
 
         # Store experiment parameters
@@ -361,6 +374,14 @@ class ExperimentManager:
         fig.update_layout(template=template, showlegend=False, height=600, width=1400)
 
         self.plots.append(fig)
+
+
+def run_experiments_params_given(params):
+
+    result_dir = Path.cwd() / "results"
+    experiment_manager = ExperimentManager(params)
+    experiment_manager.run()
+
 
 
 def run_experiments(experiments_to_run:list=None, override=True):

@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.svm import SVC
+from sklearn.semi_supervised import LabelSpreading
 from scipy.optimize import least_squares
 
 
@@ -14,34 +15,6 @@ class Learner:
     def predict_proba(self, X):
         raise NotImplementedError()
 
-
-class SVMLearner(Learner):
-    def __init__(self, K):
-        #TODO: It does not seem that fix the random state can remove the randomness
-        self.svm = SVC(probability=True, random_state=123)
-        self.K = K
-
-    def fit(self, X, y):
-        self.svm.fit(X, y)
-
-    def predict_proba(self, X):
-        prob = self.svm.predict_proba(X)
-        
-        seen_classes = self.svm.classes_
-        all_classes = np.arange(self.K)
-        if len(seen_classes) < len(all_classes):
-            n_unseen = len(all_classes) - len(seen_classes)
-            new_prob = np.zeros([len(prob), self.K]) + 1. / self.K
-            for i, c in enumerate(seen_classes):
-                new_prob[:, c] = prob[:, i] * (1 - n_unseen / self.K)
-            prob = new_prob
-
-        return prob
-
-    def predict(self, X):
-        prob = self.predict_proba(X)
-        return prob.argmax(1)
-    
     def cal_ece(self, prob, true):
         ece = cal_ece(prob, true)
         return ece
@@ -54,6 +27,67 @@ class SVMLearner(Learner):
         ece = cal_ece(prob, y)
         print("After calibration: {:.2f}".format(ece))
         return prob
+
+    def adjust_prob(self, prob, seen_classes):
+
+        all_classes = np.arange(self.K)
+        if len(seen_classes) < len(all_classes):
+            n_unseen = len(all_classes) - len(seen_classes)
+            new_prob = np.zeros([len(prob), self.K]) + 1. / self.K
+            for i, c in enumerate(seen_classes):
+                new_prob[:, c] = prob[:, i] * (1 - n_unseen / self.K)
+            prob = new_prob
+
+        return prob
+
+
+class LPLearner(Learner):
+    def __init__(self, K, seed):
+        #TODO: It does not seem that fix the random state can remove the randomness
+        self.lp = LabelSpreading()
+        self.K = K
+
+    def fit(self, X, y):
+        self.lp.fit(X, y)
+
+    def predict_proba(self, X):
+        prob = self.lp.predict_proba(X)
+        seen_classes = self.lp.classes_
+        prob = self.adjust_prob(prob, seen_classes)
+        return prob
+
+    def predict(self, X):
+        prob = self.predict_proba(X)
+        return prob.argmax(1)
+    
+
+class SVMLearner(Learner):
+    def __init__(self, K, seed):
+        #TODO: It does not seem that fix the random state can remove the randomness
+        self.svm = SVC(probability=True, random_state=seed)
+        self.seed = seed
+        self.K = K
+
+    def fit(self, X, y):
+        self.svm = SVC(probability=True, random_state=self.seed)
+        self.svm.fit(X, y)
+
+    def predict_proba(self, X):
+        prob = self.svm.predict_proba(X)
+        
+        seen_classes = self.svm.classes_
+        prob = self.adjust_prob(prob, seen_classes)
+
+        return prob
+
+    def predict(self, X):
+        prob = self.predict_proba(X)
+        return prob.argmax(1)
+    
+
+
+
+
 
 
 #https://github.com/markus93/NN_calibration/blob/master/scripts/utility/evaluation.py#L130-L154
