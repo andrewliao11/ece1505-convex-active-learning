@@ -436,7 +436,7 @@ def compare_experiments(experiements_to_compare, comparison_name):
     """
 
     # Make sure all experiements are run
-    run_experiments(experiements_to_compare, override=True)
+    run_experiments(experiements_to_compare, override=False)
 
     # Store results from each experiement by name
     results_by_experiment = {}
@@ -481,7 +481,7 @@ def compare_experiments(experiements_to_compare, comparison_name):
 
 
         x = [100 * result["perc_labeled"] for result in results]
-        y = [100 * result["accuracy"] for result in results]
+        y = [result["accuracy"] for result in results]
         fig.add_trace(
             go.Scatter(
                 x=x, 
