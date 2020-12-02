@@ -5,11 +5,11 @@ for seed in 1 2 3 4 5; do
         for K in 5 10 20; do
             sampler="RandomSampler"
             name=seed_$seed-N_$N-datatype_$datatype-K_$K-learner_$learner-sampler_$sampler
-            echo "python run.py --name $name --seed $seed --N $N --datatype $datatype --K $K --learner $learner --sampler $sampler"
+            python run.py --name $name --seed $seed --N $N --datatype $datatype --K $K --learner $learner --sampler $sampler &> experiments/$name.log
             
             sampler="OptimalSampler"
             name=seed_$seed-N_$N-datatype_$datatype-K_$K-learner_$learner-sampler_$sampler
-            python run.py --name $name --seed $seed --N $N --datatype $datatype --K $K --learner $learner --sampler $sampler
+            python run.py --name $name --seed $seed --N $N --datatype $datatype --K $K --learner $learner --sampler $sampler &> experiments/$name.log
             
             sampler="CVXSampler"
             name=seed_$seed-N_$N-datatype_$datatype-K_$K-learner_$learner-sampler_$sampler
@@ -19,7 +19,7 @@ for seed in 1 2 3 4 5; do
                         diversity_type="none"
                         for clustering_type in "none" "spectral"; do
                             name=$name-sigma_$sigma-alpha_$alpha-confidence_type_$confidence_type-clustering_type_$clustering_type
-                            python run.py --name $name --seed $seed --N $N --datatype $datatype --K $K --learner $learner --sampler $sampler --sigma $sigma --alpha $alpha --confidence_type $confidence_type --diversity_type $diversity_type --clustering_type $clustering_type
+                            python run.py --name $name --seed $seed --N $N --datatype $datatype --K $K --learner $learner --sampler $sampler --sigma $sigma --alpha $alpha --confidence_type $confidence_type --diversity_type $diversity_type --clustering_type $clustering_type &> experiments/$name.log
                         done
                     done
 
@@ -27,7 +27,7 @@ for seed in 1 2 3 4 5; do
                     diversity_type="optimal"
                     for clustering_type in "none" "spectral"; do
                         name=$name-sigma_$sigma-alpha_$alpha-confidence_type_$confidence_type-clustering_type_$clustering_type
-                        python run.py --name $name --seed $seed --N $N --datatype $datatype --K $K --learner $learner --sampler $sampler --sigma $sigma --alpha $alpha --confidence_type $confidence_type --diversity_type $diversity_type --clustering_type $clustering_type
+                        python run.py --name $name --seed $seed --N $N --datatype $datatype --K $K --learner $learner --sampler $sampler --sigma $sigma --alpha $alpha --confidence_type $confidence_type --diversity_type $diversity_type --clustering_type $clustering_type &> experiments/$name.log
                     done
                     
                 done
