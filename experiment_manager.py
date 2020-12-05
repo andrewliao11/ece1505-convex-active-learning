@@ -18,8 +18,8 @@ from sklearn.preprocessing import StandardScaler
 from data.simulation.simulator import Simulator
 from learner import SVMLearner, LPLearner
 from sampler import (
-    CVXSampler, 
-    RandomSampler, 
+    CVXSampler,
+    RandomSampler,
     OptimalSampler,
 )
 
@@ -29,7 +29,7 @@ template = "plotly_white"
 # Hold all objects used in experiments.
 catalog = {
     "learners": {
-        "SVMLearner": SVMLearner, 
+        "SVMLearner": SVMLearner,
         "LPLearner": LPLearner
     },
     "simulators": {
@@ -44,7 +44,7 @@ catalog = {
 
 class ExperimentParams:
     """
-    Holds all the experiment parameters 
+    Holds all the experiment parameters
     """
     def __init__(self):
         self.name = ""
@@ -52,9 +52,9 @@ class ExperimentParams:
         self.N = 0                  # Number of datapoints
         self.input_dim = 0          # Dimension of problem
         self.labeled_ratio = 0      # Ratio of labeled data
-        self.sigma = 0              # 
+        self.sigma = 0              #
         self.noise = 0              # Noise ratio when generating data
-        self.alpha = 0              # 
+        self.alpha = 0              #
         self.K = 1
         self.seed = 123
 
@@ -79,17 +79,17 @@ class ExperimentParams:
 
         with open(str(name) + ".json", "w") as file:
             json.dump(self.__dict__, file)
-    
+
     def load(self, name):
         with open(name, "r") as file:
             params = json.load(file)
-        
+
         for k in params:
             self.__dict__[k] = params[k]
 
 
 class ExperimentManager:
-    """ 
+    """
     Holds everything to run an experiement.
     """
 
@@ -106,7 +106,7 @@ class ExperimentManager:
 
         # Make sure parameters make sense
         assert params.sigma > 1.
-        
+
         # Extract experiment classes
         simulator_cls = catalog["simulators"][params.simulator]
         learner_cls = catalog["learners"][params.learner]
@@ -116,12 +116,12 @@ class ExperimentManager:
         self.simulator = simulator_cls(params.datatype, noise=params.noise, K=params.K, seed=params.seed)
         self.learner = learner_cls(params.K, params.seed)
         self.npr = np.random.RandomState(params.seed)
-        
+
         # Generate data
         X, Y = self.simulator.simulate(10 * params.N, params.input_dim)
         valid = False
         for _ in range(100):
-            train_mask = np.zeros(len(X)).astype(np.bool)  
+            train_mask = np.zeros(len(X)).astype(np.bool)
             idx = self.npr.choice(range(len(X)), params.N, replace=False)
             train_mask[idx] = True
             if len(np.unique(Y[train_mask])) == params.K and \
@@ -130,7 +130,7 @@ class ExperimentManager:
                 break
 
         assert valid, print("The data is too imbalanced")
-        
+
         self.train_x = X[train_mask]
         self.train_y = Y[train_mask]
         self.test_x = X[~train_mask]
@@ -151,7 +151,7 @@ class ExperimentManager:
             idx = np.where(self.train_y == c)[0]
             idx = self.npr.choice(idx, int(n))
             self.labeled_mask[idx] = True
-        
+
         self.sampler = sampler_cls(self.train_x, self.train_y, self.labeled_mask, params)
 
         if params.input_dim > 2:
@@ -165,7 +165,7 @@ class ExperimentManager:
         # Store results
         self.results = []
         self.plots = []
-    
+
     def run(self):
         """ Run the experiment along with any visualizations and results. """
         print("Running")
@@ -181,9 +181,10 @@ class ExperimentManager:
             })
             if self.labeled_mask.sum() >= self.params.N:
                 break
-        
+
             self.label()
-        
+
+
         self.save()
 
     def save(self):
@@ -195,7 +196,7 @@ class ExperimentManager:
             experiment_dir.mkdir()
 
         experiment_dir = experiment_dir / self.params.name
-        
+
         if not experiment_dir.exists():
             experiment_dir.mkdir()
 
@@ -204,11 +205,11 @@ class ExperimentManager:
             str(experiment_dir / "acc_vs_labeled.jpeg"),
             title="Test Accuracy vs Labeled %"
         )
-        
+
         # Save results
         with open(experiment_dir / "results.json", "w") as file:
             json.dump(self.results, file)
-        
+
         # Write plots to video
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         video_writer = cv2.VideoWriter(str(experiment_dir / "train_test.mp4"), fourcc, 1, (1400, 600))
@@ -223,7 +224,7 @@ class ExperimentManager:
 
     def fit(self):
         self.learner.fit(
-            self.train_x[self.labeled_mask], 
+            self.train_x[self.labeled_mask],
             self.train_y[self.labeled_mask]
         )
 
@@ -239,7 +240,7 @@ class ExperimentManager:
     def sample_data_to_label(self):
         """Select new data to label."""
         return self.sampler.sample(
-            5, 
+            5,
             learner=self.learner,
             test_x = self.test_x,
             test_y = self.test_y
@@ -248,11 +249,18 @@ class ExperimentManager:
     def label(self):
         """Sample a new set of  """
         idx_to_label = self.sample_data_to_label()
+        '''
+        np.savez("results-{}".format(self.sampler.labeled_mask.sum()),
+                 Z=self.sampler.Z,
+                 labeled_mask=self.labeled_mask,
+                 X=self.train_x,
+                 Y=self.train_y)
+        '''
         self.labeled_mask[idx_to_label] = True
 
     def plot_acc_vs_labeled(self, filename, title=""):
         """
-        Plots the curve of accuracy vs the number of labeled samples 
+        Plots the curve of accuracy vs the number of labeled samples
         """
         x = [100 * result["perc_labeled"] for result in self.results]
         y = [result["accuracy"] for result in self.results]
@@ -260,8 +268,8 @@ class ExperimentManager:
         fig = go.Figure(data=go.Scatter(x=x, y=y))
         fig.update_layout(template=template)
         fig.update_layout(
-            width=800, 
-            height=600, 
+            width=800,
+            height=600,
             title={
                 'text': title,
                 'y':0.9,
@@ -276,7 +284,7 @@ class ExperimentManager:
         fig.write_image(filename)
 
     def vis_train_test(self, title=""):
-        """ 
+        """
         Visualize the test set and which samples are labeled along side
         the test set and the learner's accuracy on it.
         """
@@ -287,7 +295,7 @@ class ExperimentManager:
         fig = make_subplots(
             rows=1, cols=2,
             subplot_titles = (
-                f"Train: {int(100 * self.labeled_mask.sum() / self.params.N)}% Labeled", 
+                f"Train: {int(100 * self.labeled_mask.sum() / self.params.N)}% Labeled",
                 f"Test: {acc}% Accuracy"
             )
         )
@@ -305,7 +313,7 @@ class ExperimentManager:
                 return "white"
             else:
                 return val
-        
+
         def get_border_color(val):
             if val < 0:
                 return "black"
@@ -318,7 +326,7 @@ class ExperimentManager:
         colors = [get_color(color) for color in colors]
         fig.add_trace(
             go.Scatter(
-                x=train_x[:, 0], 
+                x=train_x[:, 0],
                 y=train_x[:, 1],
                 mode='markers',
                 marker=dict(
@@ -337,7 +345,7 @@ class ExperimentManager:
                 return val
             else:
                 return "red"
-        
+
         def get_symbol(val):
             if val:
                 return "circle"
@@ -350,7 +358,7 @@ class ExperimentManager:
         symbols = [get_symbol(pred) for pred in prediction_eval]
         fig.add_trace(
             go.Scatter(
-                x=test_x[:, 0], 
+                x=test_x[:, 0],
                 y=test_x[:, 1],
                 mode='markers',
                 marker_line_width=2,
@@ -386,7 +394,7 @@ def run_experiments_params_given(params):
 
 def run_experiments(experiments_to_run:list=None, override=True):
     """
-    Run all experiments in the experiments folder that have 
+    Run all experiments in the experiments folder that have
     their params.json specified but have no results.
 
     Parameters
@@ -411,7 +419,7 @@ def run_experiments(experiments_to_run:list=None, override=True):
 
         for experiement in experiments:
             if experiement.is_dir():
-                
+
                 params_json = experiement / "params.json"
                 results_json = experiement / "results.json"
 
@@ -450,19 +458,19 @@ def compare_experiments(experiements_to_compare, comparison_name):
             results_file = experiment / "results.json"
             with open(str(results_file), "r") as file:
                 results = json.load(file)
-            
+
             results_by_experiment[experiment.name] = results
-    
+
 
     # Plot Results
     fig = go.Figure()
     fig.update_layout(template=template)
     fig.update_layout(
-        width=800, 
-        height=600, 
+        width=800,
+        height=600,
         xaxis_title='Labeled (%)',
         yaxis_title='Accuracy (%)',
-        yaxis=dict(range=[0, 100]), 
+        yaxis=dict(range=[0, 100]),
         xaxis=dict(range=[0, 100]),
         legend=dict(
             yanchor="bottom",
@@ -484,7 +492,7 @@ def compare_experiments(experiements_to_compare, comparison_name):
         y = [result["accuracy"] for result in results]
         fig.add_trace(
             go.Scatter(
-                x=x, 
+                x=x,
                 y=y,
                 name=experiment
             ),
@@ -493,5 +501,5 @@ def compare_experiments(experiements_to_compare, comparison_name):
     plots_dir = Path.cwd() / "plots"
     if not plots_dir.exists():
         plots_dir.mkdir()
-    
+
     fig.write_image(str(plots_dir / comparison_name))
